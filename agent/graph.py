@@ -88,7 +88,7 @@ def get_message_history(session_id: str):
 
 # ---------- 初始化模型 ----------
 model = ChatOpenAI(
-    model=os.getenv("MODEL"),   # 推荐使用 GPT-4 或 GPT-3.5-turbo-16k
+    model=os.getenv("MODEL"),   #
     temperature=0.2,                                    # 低温度提高代码生成稳定性
     api_key=os.getenv("OPENAI_API_KEY"),
     base_url=os.getenv("OPENAI_BASE_URL")
@@ -103,8 +103,8 @@ agent = create_agent(
     model=model,
     tools=get_tools(),
     checkpointer=checkpointer,
-    system_prompt=(   # 注意参数名是 system_prompt
-        "你是一个专业的数据分析助手，名叫「小智」。你的任务是根据用户上传的 CSV/Excel 文件以及用户的自然语言需求，生成并执行 pandas 代码来回答问题。\n"
+    system_prompt=(   #提示词
+        "你是一个专业的数据分析助手，名叫「小杨」。你的任务是根据用户上传的 CSV/Excel 文件以及用户的自然语言需求，生成并执行 pandas 代码来回答问题。\n"
         "工作流程：\n"
         "1. 如果用户尚未上传文件，请先提示用户上传 CSV 或 Excel 文件（前端支持上传）。\n"
         "2. 用户上传文件后，系统会自动调用 load_data 工具加载文件并返回前几行预览和基本信息。\n"

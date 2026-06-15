@@ -362,14 +362,14 @@
 
     <div class="chat-main">
         <div class="chat-header">
-            <h2>📊 数据分析助手 · 小智</h2>
+            <h2>📊 数据分析助手 · 小杨</h2>
             <span>支持 CSV / Excel，自然语言分析</span>
         </div>
 
         <div class="upload-area">
             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
             <button class="upload-btn" id="uploadBtn">📂 上传 CSV / Excel</button>
-            <button class="download-btn" id="downloadBtn">📥 下载处理后 CSV</button>
+
             <span class="upload-status" id="uploadStatus"></span>
         </div>
 
@@ -391,7 +391,7 @@
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('fileInput');
     const uploadStatus = document.getElementById('uploadStatus');
-    const downloadBtn = document.getElementById('downloadBtn');
+
 
     // 初始化 Showdown 转换器 (支持表格、任务列表等)
     const converter = new showdown.Converter();
@@ -663,7 +663,7 @@
         if (e.target.files.length) uploadFile(e.target.files[0]);
         fileInput.value = '';
     });
-    downloadBtn.addEventListener('click', downloadCSV);
+
     sendBtn.addEventListener('click', sendMessage);
     messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     newChatBtn.addEventListener('click', newConversation);
