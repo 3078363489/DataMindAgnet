@@ -2,11 +2,12 @@
 import uuid
 import sqlite3
 import json
-from flask import Flask, request, jsonify, render_template
-from langchain_core.messages import HumanMessage
 import base64
+from io import BytesIO
+from flask import Flask, request, jsonify, render_template, send_file
+from langchain_core.messages import HumanMessage
 from agent.graph import get_agent, get_message_history
-
+from agent.tools import get_session_dataframe, delete_session_dataframe
 app = Flask(__name__)
 
 agent, _, _ = get_agent()
@@ -159,6 +160,42 @@ def get_sessions():
 @app.route("/session/<session_id>/messages", methods=["GET"])
 def get_session_messages(session_id):
     return jsonify(get_raw_messages(session_id))
+# -------------------- 新增：下载 CSV --------------------
+@app.route("/download/<session_id>", methods=["GET"])
+def download_data(session_id):
+    """下载当前会话处理后的数据为 CSV，支持自定义文件名参数"""
+    df = get_session_dataframe(session_id)
+    if df is None:
+        return jsonify({"error": "没有已加载的数据，请先上传文件并执行分析"}), 404
 
+    # 获取前端传递的文件名（可选），默认为 data_{session_id}.csv
+    filename = request.args.get("filename", f"data_{session_id}.csv")
+    if not filename.endswith(".csv"):
+        filename += ".csv"
+
+    try:
+        csv_data = df.to_csv(index=False, encoding='utf-8-sig')
+        return send_file(
+            BytesIO(csv_data.encode('utf-8-sig')),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# -------------------- 新增：删除会话 --------------------
+@app.route("/session/<session_id>", methods=["DELETE"])
+def delete_session(session_id):
+    """删除指定会话的所有消息及缓存数据"""
+    try:
+        # 1. 删除消息历史
+        msg_history = get_message_history(session_id)
+        msg_history.clear()
+        # 2. 删除 DataFrame 缓存
+        delete_session_dataframe(session_id)
+        return jsonify({"success": True, "message": "会话已删除"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

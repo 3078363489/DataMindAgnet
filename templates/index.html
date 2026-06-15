@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能数据分析助手 · 小智</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
+    <!-- 引入 Showdown 库 (Markdown -> HTML) -->
+    <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Inter', 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb4d);
@@ -22,7 +23,6 @@
             align-items: center;
             padding: 20px;
         }
-
         .app-container {
             width: 1400px;
             max-width: 98vw;
@@ -32,11 +32,10 @@
             border-radius: 28px;
             backdrop-filter: blur(2px);
         }
-
-        /* 侧边栏（历史记录） */
+        /* 侧边栏 */
         .history-sidebar {
             width: 280px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.2);
             backdrop-filter: blur(20px);
             border-radius: 28px;
             padding: 20px 12px;
@@ -45,7 +44,6 @@
             box-shadow: 0 8px 20px rgba(0,0,0,0.15);
             border: 1px solid rgba(255,255,255,0.3);
         }
-
         .sidebar-header {
             display: flex;
             justify-content: space-between;
@@ -54,14 +52,11 @@
             border-bottom: 1px solid rgba(255,255,255,0.2);
             margin-bottom: 16px;
         }
-
         .sidebar-header h3 {
             font-size: 1.1rem;
             font-weight: 600;
             color: white;
-            letter-spacing: -0.3px;
         }
-
         .new-chat-btn {
             background: rgba(255,255,255,0.25);
             border: none;
@@ -75,12 +70,10 @@
             align-items: center;
             gap: 6px;
         }
-
         .new-chat-btn:hover {
             background: rgba(255,255,255,0.4);
             transform: scale(0.96);
         }
-
         .session-list {
             flex: 1;
             overflow-y: auto;
@@ -88,28 +81,30 @@
             flex-direction: column;
             gap: 8px;
         }
-
         .session-item {
             background: rgba(255,255,255,0.15);
             backdrop-filter: blur(8px);
             border-radius: 20px;
-            padding: 12px 14px;
+            padding: 10px 12px;
             cursor: pointer;
             transition: all 0.2s ease;
             border: 1px solid transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
         .session-item:hover {
             background: rgba(255,255,255,0.3);
             transform: translateX(4px);
         }
-
         .session-item.active {
             background: rgba(255,255,255,0.4);
             border-color: rgba(255,255,255,0.6);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-
+        .session-info {
+            flex: 1;
+            overflow: hidden;
+        }
         .session-preview {
             font-size: 0.85rem;
             font-weight: 500;
@@ -118,13 +113,26 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
         .session-time {
             font-size: 0.7rem;
             color: rgba(255,255,255,0.7);
             margin-top: 4px;
         }
-
+        .delete-session-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            transition: 0.2s;
+            margin-left: 8px;
+        }
+        .delete-session-btn:hover {
+            background: rgba(255,0,0,0.6);
+            transform: scale(1.05);
+        }
         /* 聊天主区域 */
         .chat-main {
             flex: 1;
@@ -135,7 +143,6 @@
             overflow: hidden;
             box-shadow: 0 20px 35px rgba(0,0,0,0.2);
         }
-
         .chat-header {
             background: white;
             padding: 20px 28px;
@@ -144,7 +151,6 @@
             align-items: baseline;
             justify-content: space-between;
         }
-
         .chat-header h2 {
             font-size: 1.4rem;
             font-weight: 600;
@@ -153,13 +159,6 @@
             background-clip: text;
             color: transparent;
         }
-
-        .chat-header span {
-            font-size: 0.8rem;
-            color: #8e9aaf;
-        }
-
-        /* 上传区域 */
         .upload-area {
             padding: 12px 28px;
             background: #f8fafc;
@@ -169,8 +168,7 @@
             gap: 16px;
             flex-wrap: wrap;
         }
-
-        .upload-btn {
+        .upload-btn, .download-btn {
             background: #4a6fa5;
             border: none;
             color: white;
@@ -184,17 +182,14 @@
             align-items: center;
             gap: 8px;
         }
-
-        .upload-btn:hover {
+        .upload-btn:hover, .download-btn:hover {
             background: #3a5a8c;
             transform: scale(0.97);
         }
-
         .upload-status {
             font-size: 0.8rem;
             color: #2c3e66;
         }
-
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -204,7 +199,6 @@
             flex-direction: column;
             gap: 16px;
         }
-
         .message {
             display: flex;
             align-items: flex-start;
@@ -212,27 +206,12 @@
             max-width: 85%;
             animation: fadeInUp 0.2s ease;
         }
-
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .user-message {
-            margin-left: auto;
-            flex-direction: row-reverse;
-        }
-
-        .bot-message {
-            margin-right: auto;
-        }
-
+        .user-message { margin-left: auto; flex-direction: row-reverse; }
+        .bot-message { margin-right: auto; }
         .avatar {
             width: 36px;
             height: 36px;
@@ -244,12 +223,7 @@
             background: #eef2ff;
             flex-shrink: 0;
         }
-
-        .user-message .avatar {
-            background: #4a6fa5;
-            color: white;
-        }
-
+        .user-message .avatar { background: #4a6fa5; color: white; }
         .message-bubble {
             background: white;
             padding: 12px 18px;
@@ -259,38 +233,37 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             color: #1e293b;
             word-break: break-word;
-            white-space: pre-wrap;
-            font-family: inherit;
+            overflow-x: auto;
         }
-
-        /* 分析结果（代码输出）用等宽字体更好看 */
+        /* Markdown 表格样式 */
+        .message-bubble table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+            font-size: 0.85rem;
+        }
+        .message-bubble th, .message-bubble td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .message-bubble th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+        .message-bubble tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        /* 列表样式 */
+        .message-bubble ul, .message-bubble ol {
+            margin: 8px 0 8px 20px;
+        }
+        .message-bubble li {
+            margin: 4px 0;
+        }
+        /* 代码块 */
         .message-bubble pre {
             background: #f1f5f9;
-            padding: 12px;
-            border-radius: 12px;
-            overflow-x: auto;
-            font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 0.85rem;
-            margin-top: 8px;
-            white-space: pre-wrap;
-        }
-
-        .user-message .message-bubble {
-            background: #4a6fa5;
-            color: white;
-            border-bottom-right-radius: 6px;
-        }
-
-        .bot-message .message-bubble {
-            background: white;
-            border-bottom-left-radius: 6px;
-            border: 1px solid #e2e8f0;
-        }
-
-        /* 代码块样式 */
-        .code-block {
-            background: #0f172a;
-            color: #e2e8f0;
             padding: 12px;
             border-radius: 12px;
             overflow-x: auto;
@@ -298,7 +271,23 @@
             font-size: 0.85rem;
             margin: 8px 0;
         }
-
+        .message-bubble code {
+            background: #eef2ff;
+            padding: 2px 4px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .user-message .message-bubble {
+            background: #4a6fa5;
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+        .bot-message .message-bubble {
+            background: white;
+            border-bottom-left-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
         .chat-input-area {
             display: flex;
             padding: 18px 24px;
@@ -306,23 +295,18 @@
             border-top: 1px solid #edf2f7;
             gap: 12px;
         }
-
         .chat-input {
             flex: 1;
             padding: 12px 20px;
             border: 1px solid #e2e8f0;
             border-radius: 40px;
             font-size: 0.95rem;
-            transition: 0.2s;
             outline: none;
-            font-family: inherit;
         }
-
         .chat-input:focus {
             border-color: #4a6fa5;
             box-shadow: 0 0 0 3px rgba(74,111,165,0.2);
         }
-
         .send-btn {
             background: #4a6fa5;
             border: none;
@@ -332,17 +316,13 @@
             font-weight: 600;
             cursor: pointer;
             transition: 0.2s;
-            font-size: 0.9rem;
         }
-
         .send-btn:hover {
             background: #3a5a8c;
             transform: scale(0.96);
         }
-
         .typing-indicator {
             display: flex;
-            align-items: center;
             gap: 6px;
             padding: 10px 18px;
             background: white;
@@ -350,7 +330,6 @@
             width: fit-content;
             border: 1px solid #e2e8f0;
         }
-
         .typing-dot {
             width: 8px;
             height: 8px;
@@ -358,31 +337,19 @@
             border-radius: 50%;
             animation: typing 1.4s infinite;
         }
-
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
         @keyframes typing {
             0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
             30% { transform: translateY(-8px); opacity: 1; }
         }
-
-        ::-webkit-scrollbar {
-            width: 5px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #eef2f6;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #eef2f6; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body>
 <div class="app-container">
-    <!-- 左侧历史侧边栏 -->
     <div class="history-sidebar">
         <div class="sidebar-header">
             <h3>📋 历史会话</h3>
@@ -393,23 +360,20 @@
         </div>
     </div>
 
-    <!-- 右侧聊天主区域 -->
     <div class="chat-main">
         <div class="chat-header">
             <h2>📊 数据分析助手 · 小智</h2>
             <span>支持 CSV / Excel，自然语言分析</span>
         </div>
 
-        <!-- 文件上传区域 -->
         <div class="upload-area">
             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
             <button class="upload-btn" id="uploadBtn">📂 上传 CSV / Excel</button>
+            <button class="download-btn" id="downloadBtn">📥 下载处理后 CSV</button>
             <span class="upload-status" id="uploadStatus"></span>
         </div>
 
-        <div class="chat-messages" id="chatMessages">
-            <!-- 动态消息 -->
-        </div>
+        <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-area">
             <input type="text" class="chat-input" id="messageInput" placeholder="例如：计算销售额总和，并按日期排序..." autocomplete="off">
             <button class="send-btn" id="sendBtn">发送</button>
@@ -419,8 +383,6 @@
 
 <script>
     let currentSessionId = null;
-    let isLoadingHistory = false;
-
     const chatMessagesDiv = document.getElementById('chatMessages');
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -429,8 +391,17 @@
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('fileInput');
     const uploadStatus = document.getElementById('uploadStatus');
+    const downloadBtn = document.getElementById('downloadBtn');
 
-    // ---------- 辅助函数 ----------
+    // 初始化 Showdown 转换器 (支持表格、任务列表等)
+    const converter = new showdown.Converter();
+    converter.setOption('tables', true);
+    converter.setOption('tasklists', true);
+    converter.setOption('simpleLineBreaks', true);
+    converter.setOption('strikethrough', true);
+    converter.setOption('emoji', true);
+
+    // 辅助函数
     function formatTime(timestamp) {
         if (!timestamp) return '';
         const date = new Date(timestamp);
@@ -444,21 +415,19 @@
             if (m === '<') return '&lt;';
             if (m === '>') return '&gt;';
             return m;
-        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
-            return c;
         });
     }
 
-    // 增强渲染：支持纯文本中的表格/代码块自动保留格式
-    function renderMessageContent(text) {
-        // 简单处理：如果文本包含换行或空格，用 pre 包裹，否则普通段落
-        if (text.includes('\n') || text.includes('|') || text.includes('```')) {
-            return `<pre style="margin:0; white-space:pre-wrap; font-family:monospace;">${escapeHtml(text)}</pre>`;
-        }
-        return escapeHtml(text);
+    // 渲染 Markdown -> HTML (仅用于机器人消息)
+    function renderMarkdown(text) {
+        if (!text) return '';
+        // 直接转换 Markdown 为 HTML
+        let html = converter.makeHtml(text);
+        // 额外处理：将 /download/ 开头的链接美化显示（可选）
+        html = html.replace(/(<a\s+href=")(\/download\/[^"]+)(")/g, '$1$2$3📥 下载文件');
+        return html;
     }
 
-    // 渲染聊天消息
     function renderMessages(messages) {
         chatMessagesDiv.innerHTML = '';
         if (!messages || messages.length === 0) {
@@ -483,43 +452,33 @@
             const div = document.createElement('div');
             div.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
             const avatar = isUser ? '👤' : '🤖';
-            const contentHtml = isUser ? escapeHtml(msg.content) : renderMessageContent(msg.content);
-            div.innerHTML = `
-                <div class="avatar">${avatar}</div>
-                <div class="message-bubble">${contentHtml}</div>
-            `;
+            let contentHtml;
+            if (isUser) {
+                contentHtml = escapeHtml(msg.content);
+            } else {
+                contentHtml = renderMarkdown(msg.content);
+            }
+            div.innerHTML = `<div class="avatar">${avatar}</div><div class="message-bubble">${contentHtml}</div>`;
             chatMessagesDiv.appendChild(div);
         }
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
     }
 
-    // 显示/隐藏打字动画
     let typingIndicator = null;
     function showTyping() {
         if (typingIndicator) hideTyping();
         const div = document.createElement('div');
         div.className = 'message bot-message';
         div.id = 'typingIndicator';
-        div.innerHTML = `
-            <div class="avatar">🤖</div>
-            <div class="typing-indicator">
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-            </div>
-        `;
+        div.innerHTML = `<div class="avatar">🤖</div><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
         chatMessagesDiv.appendChild(div);
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
         typingIndicator = div;
     }
     function hideTyping() {
-        if (typingIndicator) {
-            typingIndicator.remove();
-            typingIndicator = null;
-        }
+        if (typingIndicator) { typingIndicator.remove(); typingIndicator = null; }
     }
 
-    // 加载历史会话列表
     async function loadSessions() {
         try {
             const res = await fetch('/sessions');
@@ -534,9 +493,17 @@
                 item.className = `session-item ${currentSessionId === sess.session_id ? 'active' : ''}`;
                 item.dataset.id = sess.session_id;
                 item.innerHTML = `
-                    <div class="session-preview">${escapeHtml(sess.preview || '新对话')}</div>
-                    <div class="session-time">${sess.last_time ? formatTime(sess.last_time) : ''}</div>
+                    <div class="session-info">
+                        <div class="session-preview">${escapeHtml(sess.preview || '新对话')}</div>
+                        <div class="session-time">${sess.last_time ? formatTime(sess.last_time) : ''}</div>
+                    </div>
+                    <button class="delete-session-btn" data-id="${sess.session_id}">🗑️</button>
                 `;
+                const deleteBtn = item.querySelector('.delete-session-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteSession(sess.session_id);
+                });
                 item.addEventListener('click', () => switchSession(sess.session_id));
                 sessionListDiv.appendChild(item);
             }
@@ -545,14 +512,30 @@
         }
     }
 
-    // 切换会话
+    async function deleteSession(sessionId) {
+        if (!confirm('确定要删除这个会话吗？所有消息和缓存数据将被清除。')) return;
+        try {
+            const res = await fetch(`/session/${sessionId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                if (currentSessionId === sessionId) {
+                    currentSessionId = null;
+                    renderMessages([]);
+                }
+                await loadSessions();
+            } else {
+                alert('删除失败：' + (data.error || '未知错误'));
+            }
+        } catch (err) {
+            alert('删除失败，请重试');
+            console.error(err);
+        }
+    }
+
     async function switchSession(sessionId) {
         if (currentSessionId === sessionId) return;
         currentSessionId = sessionId;
-        document.querySelectorAll('.session-item').forEach(el => {
-            if (el.dataset.id === sessionId) el.classList.add('active');
-            else el.classList.remove('active');
-        });
+        await loadSessions();
         try {
             const res = await fetch(`/session/${sessionId}/messages`);
             const messages = await res.json();
@@ -563,33 +546,25 @@
         }
     }
 
-    // 新对话
     function newConversation() {
         currentSessionId = null;
-        document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
         renderMessages([]);
         loadSessions();
     }
 
-    // 发送消息
     async function sendMessage() {
         const message = messageInput.value.trim();
         if (!message) return;
-
-        // 显示用户消息
         const userMsgDiv = document.createElement('div');
         userMsgDiv.className = 'message user-message';
         userMsgDiv.innerHTML = `<div class="avatar">👤</div><div class="message-bubble">${escapeHtml(message)}</div>`;
         chatMessagesDiv.appendChild(userMsgDiv);
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
         messageInput.value = '';
-
         showTyping();
-
         try {
             const payload = { message: message };
             if (currentSessionId) payload.session_id = currentSessionId;
-
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -597,22 +572,15 @@
             });
             const data = await response.json();
             hideTyping();
-
             if (data.response) {
                 const botMsgDiv = document.createElement('div');
                 botMsgDiv.className = 'message bot-message';
-                botMsgDiv.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${renderMessageContent(data.response)}</div>`;
+                botMsgDiv.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${renderMarkdown(data.response)}</div>`;
                 chatMessagesDiv.appendChild(botMsgDiv);
                 chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-
                 if (data.session_id) {
                     currentSessionId = data.session_id;
-                }
-                await loadSessions();
-                if (currentSessionId) {
-                    document.querySelectorAll('.session-item').forEach(el => {
-                        if (el.dataset.id === currentSessionId) el.classList.add('active');
-                    });
+                    await loadSessions();
                 }
             } else {
                 const errDiv = document.createElement('div');
@@ -631,24 +599,21 @@
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
     }
 
-    // 文件上传
     async function uploadFile(file) {
         if (!file) return;
         uploadStatus.textContent = '上传中...';
         const formData = new FormData();
         formData.append('file', file);
         if (currentSessionId) formData.append('session_id', currentSessionId);
-
         try {
             const res = await fetch('/upload', { method: 'POST', body: formData });
             const data = await res.json();
             if (data.session_id) {
                 currentSessionId = data.session_id;
                 await loadSessions();
-                // 在聊天区显示上传结果
                 const resultMsg = document.createElement('div');
                 resultMsg.className = 'message bot-message';
-                resultMsg.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${renderMessageContent(data.message || '文件已加载')}</div>`;
+                resultMsg.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${renderMarkdown(data.message || '文件已加载')}</div>`;
                 chatMessagesDiv.appendChild(resultMsg);
                 chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
                 uploadStatus.textContent = '上传成功';
@@ -662,29 +627,52 @@
         }
     }
 
-    // 事件绑定
+    async function downloadCSV() {
+        if (!currentSessionId) {
+            alert('请先选择一个会话或上传文件');
+            return;
+        }
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}`;
+        const filename = `清洗后数据_${timestamp}.csv`;
+
+        try {
+            const res = await fetch(`/download/${currentSessionId}?filename=${encodeURIComponent(filename)}`);
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                const err = await res.json();
+                alert(err.error || '下载失败，可能没有数据');
+            }
+        } catch (err) {
+            alert('下载失败，请重试');
+            console.error(err);
+        }
+    }
+
     uploadBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            uploadFile(e.target.files[0]);
-        }
-        fileInput.value = ''; // 允许重复上传同文件
+        if (e.target.files.length) uploadFile(e.target.files[0]);
+        fileInput.value = '';
     });
+    downloadBtn.addEventListener('click', downloadCSV);
     sendBtn.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     newChatBtn.addEventListener('click', newConversation);
 
-    // 初始化
     async function init() {
         await loadSessions();
         const firstItem = document.querySelector('.session-item');
-        if (firstItem && firstItem.dataset.id) {
-            await switchSession(firstItem.dataset.id);
-        } else {
-            renderMessages([]);
-        }
+        if (firstItem && firstItem.dataset.id) await switchSession(firstItem.dataset.id);
+        else renderMessages([]);
     }
     init();
 </script>

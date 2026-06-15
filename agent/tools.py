@@ -87,5 +87,41 @@ def get_data_info(config: RunnableConfig) -> str:
         return f"获取信息失败: {e}"
 
 
+# 在 tools.py 末尾（get_tools 之前）添加
+
+@tool
+def export_csv(filename: str, config: RunnableConfig) -> str:
+    """
+    导出当前 DataFrame 为 CSV 文件，返回下载链接。
+    参数 filename: 下载的文件名（不含 .csv 后缀时自动添加）
+    """
+    session_id = config.get("configurable", {}).get("thread_id")
+    if not session_id:
+        return "错误：无法获取会话ID。"
+    try:
+        df = _get_dataframe(session_id)
+    except ValueError as e:
+        return f"错误：{e}"
+
+    if not filename.endswith('.csv'):
+        filename += '.csv'
+
+    # 生成前端可访问的下载链接（相对路径）
+    download_url = f"/download/{session_id}?filename={filename}"
+    return f"✅ 数据已导出，请点击链接下载：{download_url}"
+
+
+# 修改 get_tools 函数，增加 export_csv
 def get_tools():
-    return [load_data, run_python_code, get_data_info]
+    return [load_data, run_python_code, get_data_info, export_csv]
+
+# 在 tools.py 末尾添加以下函数
+
+def get_session_dataframe(session_id: str):
+    """获取会话的 DataFrame，若无则返回 None"""
+    return _session_dataframes.get(session_id)
+
+def delete_session_dataframe(session_id: str):
+    """删除会话的 DataFrame 缓存"""
+    if session_id in _session_dataframes:
+        del _session_dataframes[session_id]
