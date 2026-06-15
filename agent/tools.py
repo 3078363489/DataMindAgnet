@@ -1,43 +1,91 @@
-import uuid
+import pandas as pd
+import io
+import os
+import sys
+import base64
+from typing import Dict
 from langchain.tools import tool
+from langchain_core.runnables import RunnableConfig
 
-# 模拟知识库检索（实际可接入向量数据库）
-FAQ_DICT = {}
-try:
-    with open("knowledge_base/faq.txt", "r", encoding="utf-8") as f:
-        for line in f:
-            if ":" in line:
-                key, val = line.strip().split(":", 1)
-                FAQ_DICT[key.strip()] = val.strip()
-except FileNotFoundError:
-    FAQ_DICT = {
-        "退货政策": "您可以在签收后7天内无理由退货。",
-        "退款时效": "3-5个工作日内原路退回。"
-    }
+# 存储每个会话的 DataFrame
+_session_dataframes: Dict[str, pd.DataFrame] = {}
 
-@tool
-def query_order(order_id: str = "") -> str:
-    """查询订单状态，需要用户提供订单号。"""
-    if not order_id or order_id.strip() == "":
-        return "请提供订单号，例如：查询订单号 1234567890"
-    return f"订单 {order_id} 当前状态：已发货，预计3天内送达。物流单号：SF{order_id[-6:]}"
+
+def _get_dataframe(session_id: str) -> pd.DataFrame:
+    if session_id not in _session_dataframes:
+        raise ValueError("尚未加载任何数据文件，请先上传 CSV/Excel。")
+    return _session_dataframes[session_id]
+
+
+def _save_dataframe(session_id: str, df: pd.DataFrame):
+    _session_dataframes[session_id] = df
+
 
 @tool
-def create_refund_request(order_id: str = "", reason: str = "") -> str:
-    """创建退货/退款工单，需要订单号和原因。"""
-    if not order_id:
-        return "请提供需要退款的订单号。"
-    ticket = str(uuid.uuid4())[:8]
-    return f"已为您创建退货工单 {ticket}，订单号 {order_id}，原因：{reason or '未说明'}。客服将在24小时内联系您。"
+def load_data(file_content_b64: str, file_name: str, config: RunnableConfig) -> str:
+    """加载 CSV/Excel 文件（Base64 编码）"""
+    session_id = config.get("configurable", {}).get("thread_id")
+    if not session_id:
+        return "错误：无法获取会话ID。"
+    try:
+        raw_data = base64.b64decode(file_content_b64)
+        ext = os.path.splitext(file_name)[1].lower()
+        if ext == '.csv':
+            df = pd.read_csv(io.BytesIO(raw_data))
+        elif ext in ('.xlsx', '.xls'):
+            df = pd.read_excel(io.BytesIO(raw_data))
+        else:
+            return f"不支持的文件类型: {ext}，请上传 CSV 或 Excel。"
+
+        _save_dataframe(session_id, df)
+        info = f"✅ 加载成功！{df.shape[0]}行 x {df.shape[1]}列\n列名：{list(df.columns)}\n\n前5行预览：\n{df.head(5).to_string()}"
+        return info
+    except Exception as e:
+        return f"加载失败: {e}"
+
 
 @tool
-def search_knowledge_base(query: str) -> str:
-    """搜索客服知识库，回答政策类问题。"""
-    for key, value in FAQ_DICT.items():
-        if key in query or query in key:
-            return f"【知识库】{key}: {value}"
-    return "未找到完全匹配的答案，建议您转人工客服（400-123-4567）。"
+def run_python_code(code: str, config: RunnableConfig) -> str:
+    """执行 pandas 代码，返回输出及数据预览"""
+    session_id = config.get("configurable", {}).get("thread_id")
+    if not session_id:
+        return "错误：无法获取会话ID。"
+
+    old_stdout = sys.stdout  # 移到 try 之前，确保 finally 中可用
+    try:
+        df = _get_dataframe(session_id)
+        namespace = {'df': df, 'pd': pd}
+        sys.stdout = io.StringIO()
+        exec(code, namespace)
+        output = sys.stdout.getvalue()
+
+        updated_df = namespace.get('df')
+        if isinstance(updated_df, pd.DataFrame):
+            _save_dataframe(session_id, updated_df)
+            preview = updated_df.head(50).to_string()
+            return f"✅ 执行成功！\n输出：\n{output}\n\n预览（最多50行）：\n{preview}"
+        else:
+            return f"✅ 执行成功！\n输出：\n{output}\n（DataFrame 未修改）"
+    except Exception as e:
+        return f"❌ 执行出错: {e}"
+    finally:
+        sys.stdout = old_stdout
+
+
+@tool
+def get_data_info(config: RunnableConfig) -> str:
+    """获取数据统计信息"""
+    session_id = config.get("configurable", {}).get("thread_id")
+    if not session_id:
+        return "错误：无法获取会话ID。"
+    try:
+        df = _get_dataframe(session_id)
+        desc = df.describe(include='all').to_string()
+        missing = df.isnull().sum().to_string()
+        return f"📊 描述统计：\n{desc}\n\n🔍 缺失值：\n{missing}"
+    except Exception as e:
+        return f"获取信息失败: {e}"
+
 
 def get_tools():
-    """返回工具列表供 Agent 使用"""
-    return [query_order, create_refund_request, search_knowledge_base]
+    return [load_data, run_python_code, get_data_info]

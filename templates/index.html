@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能客服助手 · 小智</title>
+    <title>智能数据分析助手 · 小智</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
     <style>
         * {
@@ -23,7 +23,6 @@
             padding: 20px;
         }
 
-        /* 主容器：侧边栏 + 聊天区 */
         .app-container {
             width: 1400px;
             max-width: 98vw;
@@ -34,7 +33,7 @@
             backdrop-filter: blur(2px);
         }
 
-        /* ========= 侧边栏（历史记录） ========= */
+        /* 侧边栏（历史记录） */
         .history-sidebar {
             width: 280px;
             background: rgba(255, 255, 255, 0.2);
@@ -160,6 +159,42 @@
             color: #8e9aaf;
         }
 
+        /* 上传区域 */
+        .upload-area {
+            padding: 12px 28px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .upload-btn {
+            background: #4a6fa5;
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn:hover {
+            background: #3a5a8c;
+            transform: scale(0.97);
+        }
+
+        .upload-status {
+            font-size: 0.8rem;
+            color: #2c3e66;
+        }
+
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -223,6 +258,21 @@
             font-size: 0.95rem;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             color: #1e293b;
+            word-break: break-word;
+            white-space: pre-wrap;
+            font-family: inherit;
+        }
+
+        /* 分析结果（代码输出）用等宽字体更好看 */
+        .message-bubble pre {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            white-space: pre-wrap;
         }
 
         .user-message .message-bubble {
@@ -235,6 +285,18 @@
             background: white;
             border-bottom-left-radius: 6px;
             border: 1px solid #e2e8f0;
+        }
+
+        /* 代码块样式 */
+        .code-block {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin: 8px 0;
         }
 
         .chat-input-area {
@@ -305,7 +367,6 @@
             30% { transform: translateY(-8px); opacity: 1; }
         }
 
-        /* 滚动条 */
         ::-webkit-scrollbar {
             width: 5px;
         }
@@ -335,28 +396,39 @@
     <!-- 右侧聊天主区域 -->
     <div class="chat-main">
         <div class="chat-header">
-            <h2>🤖 智能客服 · 小智</h2>
-            <span>7x24小时在线</span>
+            <h2>📊 数据分析助手 · 小智</h2>
+            <span>支持 CSV / Excel，自然语言分析</span>
         </div>
+
+        <!-- 文件上传区域 -->
+        <div class="upload-area">
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+            <button class="upload-btn" id="uploadBtn">📂 上传 CSV / Excel</button>
+            <span class="upload-status" id="uploadStatus"></span>
+        </div>
+
         <div class="chat-messages" id="chatMessages">
-            <!-- 消息会动态渲染到这里 -->
+            <!-- 动态消息 -->
         </div>
         <div class="chat-input-area">
-            <input type="text" class="chat-input" id="messageInput" placeholder="输入您的问题..." autocomplete="off">
+            <input type="text" class="chat-input" id="messageInput" placeholder="例如：计算销售额总和，并按日期排序..." autocomplete="off">
             <button class="send-btn" id="sendBtn">发送</button>
         </div>
     </div>
 </div>
 
 <script>
-    let currentSessionId = null;      // 当前激活的会话ID
-    let isLoadingHistory = false;      // 防止重复加载
+    let currentSessionId = null;
+    let isLoadingHistory = false;
 
     const chatMessagesDiv = document.getElementById('chatMessages');
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
     const sessionListDiv = document.getElementById('sessionList');
     const newChatBtn = document.getElementById('newChatBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const uploadStatus = document.getElementById('uploadStatus');
 
     // ---------- 辅助函数 ----------
     function formatTime(timestamp) {
@@ -365,35 +437,6 @@
         return `${date.getMonth()+1}/${date.getDate()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
     }
 
-    // 渲染聊天消息（清空并重新绘制）
-    function renderMessages(messages) {
-        chatMessagesDiv.innerHTML = '';
-        if (!messages || messages.length === 0) {
-            // 欢迎消息
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.className = 'message bot-message';
-            welcomeDiv.innerHTML = `
-                <div class="avatar">🤖</div>
-                <div class="message-bubble">您好！我是客服助手小智。可以帮您查询订单、处理退货、解答政策问题。请问有什么可以帮您？</div>
-            `;
-            chatMessagesDiv.appendChild(welcomeDiv);
-            return;
-        }
-        for (let msg of messages) {
-            const isUser = (msg.role === 'user');
-            const div = document.createElement('div');
-            div.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            const avatar = isUser ? '👤' : '🤖';
-            div.innerHTML = `
-                <div class="avatar">${avatar}</div>
-                <div class="message-bubble">${escapeHtml(msg.content)}</div>
-            `;
-            chatMessagesDiv.appendChild(div);
-        }
-        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-    }
-
-    // 简单的防XSS
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -404,6 +447,50 @@
         }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
             return c;
         });
+    }
+
+    // 增强渲染：支持纯文本中的表格/代码块自动保留格式
+    function renderMessageContent(text) {
+        // 简单处理：如果文本包含换行或空格，用 pre 包裹，否则普通段落
+        if (text.includes('\n') || text.includes('|') || text.includes('```')) {
+            return `<pre style="margin:0; white-space:pre-wrap; font-family:monospace;">${escapeHtml(text)}</pre>`;
+        }
+        return escapeHtml(text);
+    }
+
+    // 渲染聊天消息
+    function renderMessages(messages) {
+        chatMessagesDiv.innerHTML = '';
+        if (!messages || messages.length === 0) {
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'message bot-message';
+            welcomeDiv.innerHTML = `
+                <div class="avatar">🤖</div>
+                <div class="message-bubble">
+                    您好！我是数据分析助手小智。<br>
+                    您可以上传 CSV 或 Excel 文件，然后直接用自然语言提问，例如：<br>
+                    • “计算销售总额”<br>
+                    • “筛选出年龄大于30的行”<br>
+                    • “按地区分组并统计平均值”<br>
+                    我会自动生成 pandas 代码并执行，返回结果和预览。
+                </div>
+            `;
+            chatMessagesDiv.appendChild(welcomeDiv);
+            return;
+        }
+        for (let msg of messages) {
+            const isUser = (msg.role === 'user');
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            const avatar = isUser ? '👤' : '🤖';
+            const contentHtml = isUser ? escapeHtml(msg.content) : renderMessageContent(msg.content);
+            div.innerHTML = `
+                <div class="avatar">${avatar}</div>
+                <div class="message-bubble">${contentHtml}</div>
+            `;
+            chatMessagesDiv.appendChild(div);
+        }
+        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
     }
 
     // 显示/隐藏打字动画
@@ -458,16 +545,14 @@
         }
     }
 
-    // 切换会话：加载该会话的历史消息
+    // 切换会话
     async function switchSession(sessionId) {
         if (currentSessionId === sessionId) return;
         currentSessionId = sessionId;
-        // 高亮侧边栏
         document.querySelectorAll('.session-item').forEach(el => {
             if (el.dataset.id === sessionId) el.classList.add('active');
             else el.classList.remove('active');
         });
-        // 加载消息记录
         try {
             const res = await fetch(`/session/${sessionId}/messages`);
             const messages = await res.json();
@@ -481,10 +566,8 @@
     // 新对话
     function newConversation() {
         currentSessionId = null;
-        // 清空高亮
         document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
-        renderMessages([]);   // 显示欢迎消息
-        // 重新加载会话列表（新会话会等第一条消息后再生成）
+        renderMessages([]);
         loadSessions();
     }
 
@@ -493,7 +576,7 @@
         const message = messageInput.value.trim();
         if (!message) return;
 
-        // 临时显示用户消息
+        // 显示用户消息
         const userMsgDiv = document.createElement('div');
         userMsgDiv.className = 'message user-message';
         userMsgDiv.innerHTML = `<div class="avatar">👤</div><div class="message-bubble">${escapeHtml(message)}</div>`;
@@ -516,20 +599,16 @@
             hideTyping();
 
             if (data.response) {
-                // 显示机器人回复
                 const botMsgDiv = document.createElement('div');
                 botMsgDiv.className = 'message bot-message';
-                botMsgDiv.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${escapeHtml(data.response)}</div>`;
+                botMsgDiv.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${renderMessageContent(data.response)}</div>`;
                 chatMessagesDiv.appendChild(botMsgDiv);
                 chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
 
-                // 更新 session_id
                 if (data.session_id) {
                     currentSessionId = data.session_id;
                 }
-                // 刷新左侧会话列表（显示新会话）
                 await loadSessions();
-                // 如果当前会话是新创建的，需要重新高亮
                 if (currentSessionId) {
                     document.querySelectorAll('.session-item').forEach(el => {
                         if (el.dataset.id === currentSessionId) el.classList.add('active');
@@ -538,7 +617,7 @@
             } else {
                 const errDiv = document.createElement('div');
                 errDiv.className = 'message bot-message';
-                errDiv.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">抱歉，服务出了点小问题，请稍后再试。</div>`;
+                errDiv.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">抱歉，服务出了点问题，请稍后再试。</div>`;
                 chatMessagesDiv.appendChild(errDiv);
             }
         } catch (err) {
@@ -552,23 +631,61 @@
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
     }
 
+    // 文件上传
+    async function uploadFile(file) {
+        if (!file) return;
+        uploadStatus.textContent = '上传中...';
+        const formData = new FormData();
+        formData.append('file', file);
+        if (currentSessionId) formData.append('session_id', currentSessionId);
+
+        try {
+            const res = await fetch('/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.session_id) {
+                currentSessionId = data.session_id;
+                await loadSessions();
+                // 在聊天区显示上传结果
+                const resultMsg = document.createElement('div');
+                resultMsg.className = 'message bot-message';
+                resultMsg.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${renderMessageContent(data.message || '文件已加载')}</div>`;
+                chatMessagesDiv.appendChild(resultMsg);
+                chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+                uploadStatus.textContent = '上传成功';
+                setTimeout(() => uploadStatus.textContent = '', 2000);
+            } else {
+                uploadStatus.textContent = '上传失败：' + (data.error || '未知错误');
+            }
+        } catch (err) {
+            uploadStatus.textContent = '上传失败，请重试';
+            console.error(err);
+        }
+    }
+
+    // 事件绑定
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            uploadFile(e.target.files[0]);
+        }
+        fileInput.value = ''; // 允许重复上传同文件
+    });
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+    newChatBtn.addEventListener('click', newConversation);
+
     // 初始化
     async function init() {
         await loadSessions();
-        // 如果有会话，默认打开第一个
         const firstItem = document.querySelector('.session-item');
         if (firstItem && firstItem.dataset.id) {
             await switchSession(firstItem.dataset.id);
         } else {
             renderMessages([]);
         }
-        sendBtn.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-        newChatBtn.addEventListener('click', newConversation);
     }
-
     init();
 </script>
 </body>
