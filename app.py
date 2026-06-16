@@ -3,11 +3,15 @@ import uuid
 import sqlite3
 import json
 import base64
+import os
+import time
+import threading
 from io import BytesIO
-from flask import Flask, request, jsonify, render_template, send_file
+from flask import Flask, request, jsonify, render_template, send_file, send_from_directory
 from langchain_core.messages import HumanMessage
 from agent.graph import get_agent, get_message_history
-from agent.tools import get_session_dataframe, delete_session_dataframe
+from agent.tools import get_session_dataframe, delete_session_dataframe, CHART_STORAGE_DIR
+
 app = Flask(__name__)
 
 agent, _, _ = get_agent()
@@ -40,7 +44,6 @@ def get_all_sessions():
     """获取所有会话，预览第一条用户消息，按最后活跃时间排序"""
     conn = sqlite3.connect("chat_history.db")
     cursor = conn.cursor()
-    # 获取每个会话的最后一条消息的 created_at
     cursor.execute("""
         SELECT session_id, MAX(created_at) as last_time
         FROM message_store
@@ -50,7 +53,6 @@ def get_all_sessions():
     rows = cursor.fetchall()
     sessions = []
     for session_id, last_time in rows:
-        # 获取第一条用户消息作为预览
         cursor.execute("""
             SELECT message FROM message_store
             WHERE session_id = ? AND type = 'human'
@@ -72,6 +74,24 @@ def get_all_sessions():
     conn.close()
     return sessions
 
+# ==================== 图表文件清理（定时任务，可选） ====================
+def clean_old_charts_periodically():
+    """每隔1小时清理超过1小时的图表文件"""
+    while True:
+        time.sleep(3600)
+        try:
+            now = time.time()
+            for filename in os.listdir(CHART_STORAGE_DIR):
+                filepath = os.path.join(CHART_STORAGE_DIR, filename)
+                if os.path.isfile(filepath) and now - os.path.getmtime(filepath) > 3600:
+                    os.remove(filepath)
+        except Exception:
+            pass
+
+# 启动后台清理线程（如果不想使用，可以注释掉）
+cleaner_thread = threading.Thread(target=clean_old_charts_periodically, daemon=True)
+cleaner_thread.start()
+
 # ==================== 路由 ====================
 @app.route("/")
 def index():
@@ -92,23 +112,20 @@ def upload_file():
     file_bytes = file.read()
     file_b64 = base64.b64encode(file_bytes).decode('utf-8')
 
-    # 构造 config 对象
     config = {"configurable": {"thread_id": session_id}}
 
-    # 调用工具
     from agent.tools import load_data
     result = load_data.invoke({
         "file_content_b64": file_b64,
         "file_name": file.filename
     }, config=config)
 
-    # 存入消息历史
     msg_history = get_message_history(session_id)
     msg_history.add_user_message(f"上传文件：{file.filename}")
     msg_history.add_ai_message(result)
 
     return jsonify({"session_id": session_id, "message": result})
-# ==================== 修改 /chat 接口 ====================
+
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json()
@@ -119,29 +136,6 @@ def chat():
     session_id = data.get("session_id", str(uuid.uuid4()))
 
     msg_history = get_message_history(session_id)
-    # 注意：我们需要将 session_id 传递给工具，但 Agent 本身不会自动注入。
-    # 解决方法：在用户消息中加入特殊标记或在工具调用时从 config 中提取。
-    # 更可靠的方法：修改 graph.py 中 agent 的 state_modifier，让工具可以获取 thread_id。
-    # 由于工具函数签名需要 session_id，我们可以在调用 agent.invoke 之前，将 session_id 放入 state 中。
-    # 最简单：修改工具装饰器，使其从运行时配置中读取 session_id。
-    # 但为了不增加复杂性，这里采用临时方案：在用户消息前增加一条系统消息注入 session_id。
-    # 或者，我们在 agent 的上下文变量中设置。
-    # 更直接：重新定义工具，使用 langchain 的 @tool 装饰器支持从 config 读取。
-    # 为了代码稳定性，我们采用如下方式：在 invoke 的 config 中设置 thread_id，并在工具内部通过 config 读取。
-    # 但之前定义的 tool 并未支持 config 参数。这里改为新版做法：修改 tools.py 中的函数，增加一个参数 config。
-
-    # 为了方便演示，我们假设前端已经将 session_id 传递给工具（通过全局变量？不推荐）。
-    # 以下展示正确的实现方式：修改 tools.py 中的工具定义，让它支持从 config 获取 session_id。
-    # 由于篇幅，我们在这里给出思路，具体实现见下方注释说明。
-
-    # 实际部署时，请更新 tools.py 中工具函数的签名，增加 RunnableConfig 参数。
-
-    # 临时实现：将 session_id 注入到消息元数据中（不推荐，但可以运行）。
-    # 我们采用简单方法：将 session_id 作为全局变量存储在当前请求上下文中（Flask 应用上下文）。
-    # 在 tools.py 中定义一个线程本地变量。
-    # 这里略作简化，假设我们已经修改好了 tools.py 使其能通过 config 获取 session_id。
-
-    # 构建消息
     messages_to_send = msg_history.messages + [HumanMessage(content=user_input)]
     config = {"configurable": {"thread_id": session_id}}
 
@@ -160,15 +154,14 @@ def get_sessions():
 @app.route("/session/<session_id>/messages", methods=["GET"])
 def get_session_messages(session_id):
     return jsonify(get_raw_messages(session_id))
-# -------------------- 新增：下载 CSV --------------------
+
 @app.route("/download/<session_id>", methods=["GET"])
 def download_data(session_id):
-    """下载当前会话处理后的数据为 CSV，支持自定义文件名参数"""
+    """下载当前会话处理后的数据为 CSV"""
     df = get_session_dataframe(session_id)
     if df is None:
         return jsonify({"error": "没有已加载的数据，请先上传文件并执行分析"}), 404
 
-    # 获取前端传递的文件名（可选），默认为 data_{session_id}.csv
     filename = request.args.get("filename", f"data_{session_id}.csv")
     if not filename.endswith(".csv"):
         filename += ".csv"
@@ -184,18 +177,29 @@ def download_data(session_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# -------------------- 新增：删除会话 --------------------
 @app.route("/session/<session_id>", methods=["DELETE"])
 def delete_session(session_id):
     """删除指定会话的所有消息及缓存数据"""
     try:
-        # 1. 删除消息历史
         msg_history = get_message_history(session_id)
         msg_history.clear()
-        # 2. 删除 DataFrame 缓存
         delete_session_dataframe(session_id)
+        # 注意：图表文件不按会话存储，这里不删除，由定时清理统一处理
         return jsonify({"success": True, "message": "会话已删除"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ==================== 新增：提供 pyecharts 生成的图表 HTML 文件 ====================
+@app.route('/chart/<filename>')
+def serve_chart(filename):
+    """返回 Pyecharts 生成的图表 HTML 文件"""
+    # 安全检查
+    if '..' in filename or not filename.endswith('.html'):
+        return "Invalid file name", 400
+    try:
+        return send_from_directory(CHART_STORAGE_DIR, filename)
+    except FileNotFoundError:
+        return "Chart not found", 404
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

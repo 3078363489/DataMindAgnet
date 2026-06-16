@@ -15,8 +15,7 @@
         }
         body {
             font-family: 'Inter', 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb4d);
-            background-attachment: fixed;
+            background: #ffffff;  /* 改为纯白背景 */
             height: 100vh;
             display: flex;
             justify-content: center;
@@ -30,35 +29,41 @@
             display: flex;
             gap: 16px;
             border-radius: 28px;
-            backdrop-filter: blur(2px);
+            background: #ffffff;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+        .message-bubble img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 8px 0;
         }
         /* 侧边栏 */
         .history-sidebar {
             width: 280px;
-            background: rgba(255,255,255,0.2);
-            backdrop-filter: blur(20px);
+            background: #f8fafc;
             border-radius: 28px;
             padding: 20px 12px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            border: 1px solid #eef2f6;
         }
         .sidebar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding-bottom: 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid #e2e8f0;
             margin-bottom: 16px;
         }
         .sidebar-header h3 {
             font-size: 1.1rem;
             font-weight: 600;
-            color: white;
+            color: #1e293b;
         }
         .new-chat-btn {
-            background: rgba(255,255,255,0.25);
+            background: #4a6fa5;
             border: none;
             color: white;
             padding: 6px 12px;
@@ -71,7 +76,7 @@
             gap: 6px;
         }
         .new-chat-btn:hover {
-            background: rgba(255,255,255,0.4);
+            background: #3a5a8c;
             transform: scale(0.96);
         }
         .session-list {
@@ -82,8 +87,7 @@
             gap: 8px;
         }
         .session-item {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(8px);
+            background: #ffffff;
             border-radius: 20px;
             padding: 10px 12px;
             cursor: pointer;
@@ -92,14 +96,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
         .session-item:hover {
-            background: rgba(255,255,255,0.3);
+            background: #f1f5f9;
             transform: translateX(4px);
+            border-color: #e2e8f0;
         }
         .session-item.active {
-            background: rgba(255,255,255,0.4);
-            border-color: rgba(255,255,255,0.6);
+            background: #eef2ff;
+            border-color: #4a6fa5;
         }
         .session-info {
             flex: 1;
@@ -108,21 +114,21 @@
         .session-preview {
             font-size: 0.85rem;
             font-weight: 500;
-            color: white;
+            color: #1e293b;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         .session-time {
             font-size: 0.7rem;
-            color: rgba(255,255,255,0.7);
+            color: #94a3b8;
             margin-top: 4px;
         }
         .delete-session-btn {
-            background: rgba(255,255,255,0.2);
+            background: #f1f5f9;
             border: none;
             border-radius: 20px;
-            color: white;
+            color: #64748b;
             cursor: pointer;
             font-size: 0.8rem;
             padding: 4px 8px;
@@ -130,21 +136,23 @@
             margin-left: 8px;
         }
         .delete-session-btn:hover {
-            background: rgba(255,0,0,0.6);
+            background: #fee2e2;
+            color: #ef4444;
             transform: scale(1.05);
         }
         /* 聊天主区域 */
         .chat-main {
             flex: 1;
-            background: white;
+            background: #ffffff;
             border-radius: 28px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            border: 1px solid #eef2f6;
         }
         .chat-header {
-            background: white;
+            background: #ffffff;
             padding: 20px 28px;
             border-bottom: 1px solid #eef2f6;
             display: flex;
@@ -168,7 +176,7 @@
             gap: 16px;
             flex-wrap: wrap;
         }
-        .upload-btn, .download-btn {
+        .upload-btn {
             background: #4a6fa5;
             border: none;
             color: white;
@@ -182,7 +190,7 @@
             align-items: center;
             gap: 8px;
         }
-        .upload-btn:hover, .download-btn:hover {
+        .upload-btn:hover {
             background: #3a5a8c;
             transform: scale(0.97);
         }
@@ -346,6 +354,14 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #eef2f6; border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        iframe.chart-iframe {
+            width: 100%;
+            min-height: 500px;
+            border: none;
+            border-radius: 12px;
+            margin: 12px 0;
+            background: #f8fafc;
+        }
     </style>
 </head>
 <body>
@@ -356,26 +372,25 @@
             <button class="new-chat-btn" id="newChatBtn">➕ 新对话</button>
         </div>
         <div class="session-list" id="sessionList">
-            <div style="color:rgba(255,255,255,0.7); text-align:center; padding:20px;">加载中...</div>
+            <div style="color:#94a3b8; text-align:center; padding:20px;">加载中...</div>
         </div>
     </div>
 
     <div class="chat-main">
         <div class="chat-header">
             <h2>📊 数据分析助手 · 小杨</h2>
-            <span>支持 CSV / Excel，自然语言分析</span>
+            <span style="color:#64748b;">支持 CSV / Excel，自然语言分析 + 交互图表</span>
         </div>
 
         <div class="upload-area">
             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
             <button class="upload-btn" id="uploadBtn">📂 上传 CSV / Excel</button>
-
             <span class="upload-status" id="uploadStatus"></span>
         </div>
 
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-area">
-            <input type="text" class="chat-input" id="messageInput" placeholder="例如：计算销售额总和，并按日期排序..." autocomplete="off">
+            <input type="text" class="chat-input" id="messageInput" placeholder="例如：计算销售额总和，并按日期排序，画一个柱状图..." autocomplete="off">
             <button class="send-btn" id="sendBtn">发送</button>
         </div>
     </div>
@@ -391,7 +406,6 @@
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('fileInput');
     const uploadStatus = document.getElementById('uploadStatus');
-
 
     // 初始化 Showdown 转换器 (支持表格、任务列表等)
     const converter = new showdown.Converter();
@@ -421,11 +435,29 @@
     // 渲染 Markdown -> HTML (仅用于机器人消息)
     function renderMarkdown(text) {
         if (!text) return '';
-        // 直接转换 Markdown 为 HTML
         let html = converter.makeHtml(text);
-        // 额外处理：将 /download/ 开头的链接美化显示（可选）
+        // 将 /download/ 开头的链接美化显示
         html = html.replace(/(<a\s+href=")(\/download\/[^"]+)(")/g, '$1$2$3📥 下载文件');
         return html;
+    }
+
+    // 将消息容器中的 <chart-ref> 标签替换为 iframe
+    function replaceChartRefs(container) {
+        const bubbles = container.querySelectorAll('.message-bubble');
+        bubbles.forEach(bubble => {
+            let html = bubble.innerHTML;
+            const regex = /<chart-ref\s+url=['"]([^'"]+)['"]><\/chart-ref>/g;
+            let newHtml = html;
+            let match;
+            while ((match = regex.exec(html)) !== null) {
+                const url = match[1];
+                const iframe = `<iframe class="chart-iframe" src="${url}" frameborder="0" allowfullscreen></iframe>`;
+                newHtml = newHtml.replace(match[0], iframe);
+            }
+            if (newHtml !== html) {
+                bubble.innerHTML = newHtml;
+            }
+        });
     }
 
     function renderMessages(messages) {
@@ -436,15 +468,17 @@
             welcomeDiv.innerHTML = `
                 <div class="avatar">🤖</div>
                 <div class="message-bubble">
-                    您好！我是数据分析助手小智。<br>
+                    您好！我是数据分析助手小杨。<br>
                     您可以上传 CSV 或 Excel 文件，然后直接用自然语言提问，例如：<br>
                     • “计算销售总额”<br>
                     • “筛选出年龄大于30的行”<br>
                     • “按地区分组并统计平均值”<br>
-                    我会自动生成 pandas 代码并执行，返回结果和预览。
+                    • “画一个销售额的柱状图”<br>
+                    我会自动生成 pandas 代码，并使用 pyecharts 创建交互式图表。
                 </div>
             `;
             chatMessagesDiv.appendChild(welcomeDiv);
+            replaceChartRefs(chatMessagesDiv);
             return;
         }
         for (let msg of messages) {
@@ -461,6 +495,7 @@
             div.innerHTML = `<div class="avatar">${avatar}</div><div class="message-bubble">${contentHtml}</div>`;
             chatMessagesDiv.appendChild(div);
         }
+        replaceChartRefs(chatMessagesDiv);
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
     }
 
@@ -485,7 +520,7 @@
             const sessions = await res.json();
             sessionListDiv.innerHTML = '';
             if (sessions.length === 0) {
-                sessionListDiv.innerHTML = '<div style="color:rgba(255,255,255,0.7); text-align:center; padding:20px;">暂无历史会话<br>开始新对话吧</div>';
+                sessionListDiv.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:20px;">暂无历史会话<br>开始新对话吧</div>';
                 return;
             }
             for (let sess of sessions) {
@@ -577,6 +612,7 @@
                 botMsgDiv.className = 'message bot-message';
                 botMsgDiv.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${renderMarkdown(data.response)}</div>`;
                 chatMessagesDiv.appendChild(botMsgDiv);
+                replaceChartRefs(chatMessagesDiv);
                 chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
                 if (data.session_id) {
                     currentSessionId = data.session_id;
@@ -615,6 +651,7 @@
                 resultMsg.className = 'message bot-message';
                 resultMsg.innerHTML = `<div class="avatar">🤖</div><div class="message-bubble">${renderMarkdown(data.message || '文件已加载')}</div>`;
                 chatMessagesDiv.appendChild(resultMsg);
+                replaceChartRefs(chatMessagesDiv);
                 chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
                 uploadStatus.textContent = '上传成功';
                 setTimeout(() => uploadStatus.textContent = '', 2000);
@@ -627,43 +664,11 @@
         }
     }
 
-    async function downloadCSV() {
-        if (!currentSessionId) {
-            alert('请先选择一个会话或上传文件');
-            return;
-        }
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}`;
-        const filename = `清洗后数据_${timestamp}.csv`;
-
-        try {
-            const res = await fetch(`/download/${currentSessionId}?filename=${encodeURIComponent(filename)}`);
-            if (res.ok) {
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } else {
-                const err = await res.json();
-                alert(err.error || '下载失败，可能没有数据');
-            }
-        } catch (err) {
-            alert('下载失败，请重试');
-            console.error(err);
-        }
-    }
-
     uploadBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length) uploadFile(e.target.files[0]);
         fileInput.value = '';
     });
-
     sendBtn.addEventListener('click', sendMessage);
     messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     newChatBtn.addEventListener('click', newConversation);
