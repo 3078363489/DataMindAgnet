@@ -12,7 +12,7 @@ from .tools import get_tools
 
 load_dotenv()
 
-# ---------- 自定义消息历史（与原 app.py 一致）----------
+
 class CustomSQLiteMessageHistory:
     def __init__(self, session_id: str, db_path: str = "chat_history.db"):
         self.session_id = session_id

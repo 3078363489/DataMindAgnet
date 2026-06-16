@@ -78,7 +78,7 @@ def get_all_sessions():
 def clean_old_charts_periodically():
     """每隔1小时清理超过1小时的图表文件"""
     while True:
-        time.sleep(3600)
+        time.sleep(60)
         try:
             now = time.time()
             for filename in os.listdir(CHART_STORAGE_DIR):
