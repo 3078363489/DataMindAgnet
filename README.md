@@ -45,6 +45,14 @@
 
 ---
 
+## 界面预览
+<img src="https://github.com/user-attachments/assets/17577d0b-9905-4d52-bbc5-369b7019eb60" width="700">
+<img src="https://github.com/user-attachments/assets/8c227fc9-51b6-467b-8551-515762b4ec37" width="700">
+<img src="https://github.com/user-attachments/assets/5ff776ff-1a5a-4045-8beb-7e84b2237800" width="700">
+<img src="https://github.com/user-attachments/assets/2708aae3-6748-4ff8-a488-d41e02036435" width="700">
+<img src="https://github.com/user-attachments/assets/040ebbf4-eca0-4f9e-82b9-42fe2c6d31ab" width="700">
+<img src="https://github.com/user-attachments/assets/ea98ad93-1c3f-422c-9dfa-12a8077b6b93" width="700">
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -68,11 +76,14 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPENAI_BASE_URL=https://api.openai.com/v1   # 若使用代理或中转，请修改
 MODEL=gpt-4o                                # 或其他支持函数调用的模型
 ```
-4. 初始化数据库
+### 4. 初始化数据库
 首次运行会自动创建 chat_history.db 和 agent_state.db，无需手动操作。
 
-5. 启动服务
+### 5. 启动服务
 ```bash
 python app.py
 访问 http://127.0.0.1:5000 即可开始使用。
 ```
+
+
+
