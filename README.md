@@ -53,8 +53,8 @@
 
 ### 1. 克隆仓库
 ```bash
-git clone https://github.com/your-username/data-assistant-xiaoyang.git
-cd data-assistant-xiaoyang
+git clone https://github.com/3078363489/DataMindAgnet.git
+cd DataMindAgnet
 ```
 ### 2. 安装依赖
 ```bash
